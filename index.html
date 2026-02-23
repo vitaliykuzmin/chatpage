@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="CDN Bakery">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#1a1a2e">
+
+  <!-- PWA manifest -->
+  <link rel="manifest" href="manifest.json">
+
+  <!-- iOS иконки (Safari добавит на экран Домой) -->
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="apple-touch-startup-image" href="icon-512.png">
+
+  <title>CDN Bakery Chat</title>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #1a1a2e;
+    }
+
+    /* ── Экран загрузки ── */
+    #splash {
+      position: fixed;
+      inset: 0;
+      background: #1a1a2e;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      transition: opacity 0.4s ease;
+    }
+    #splash.hidden { opacity: 0; pointer-events: none; }
+
+    #splash .logo {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+    #splash h1 {
+      color: #fff;
+      font-family: -apple-system, sans-serif;
+      font-size: 22px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    #splash p {
+      color: rgba(255,255,255,0.5);
+      font-family: -apple-system, sans-serif;
+      font-size: 14px;
+      margin-bottom: 32px;
+    }
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid rgba(255,255,255,0.15);
+      border-top-color: #6c63ff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Iframe ── */
+    #frame-container {
+      position: fixed;
+      inset: 0;
+      /* На iOS в режиме PWA нет строки Safari — занимаем весь экран */
+      /* env(safe-area-inset-*) — отступы под Dynamic Island / Home Indicator */
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: #1a1a2e;
+    }
+
+    /* ── Экран ошибки (если iframe заблокирован X-Frame-Options) ── */
+    #error-screen {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: #1a1a2e;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px;
+      z-index: 200;
+    }
+    #error-screen .icon { font-size: 56px; margin-bottom: 20px; }
+    #error-screen h2 {
+      color: #fff;
+      font-family: -apple-system, sans-serif;
+      font-size: 20px;
+      font-weight: 600;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+    #error-screen p {
+      color: rgba(255,255,255,0.55);
+      font-family: -apple-system, sans-serif;
+      font-size: 14px;
+      text-align: center;
+      line-height: 1.6;
+      margin-bottom: 28px;
+    }
+    #error-screen a {
+      display: inline-block;
+      background: #6c63ff;
+      color: #fff;
+      font-family: -apple-system, sans-serif;
+      font-size: 16px;
+      font-weight: 600;
+      text-decoration: none;
+      padding: 14px 32px;
+      border-radius: 14px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Экран загрузки -->
+<div id="splash">
+  <div class="logo">🍞</div>
+  <h1>CDN Bakery Chat</h1>
+  <p>chat.cdnbakery.com</p>
+  <div class="spinner"></div>
+</div>
+
+<!-- Основной iframe -->
+<div id="frame-container">
+  <iframe
+    id="main-frame"
+    src="https://chat.cdnbakery.com/"
+    allow="microphone; camera; clipboard-read; clipboard-write"
+    sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-downloads"
+    title="CDN Bakery Chat">
+  </iframe>
+</div>
+
+<!-- Экран ошибки (если X-Frame-Options блокирует) -->
+<div id="error-screen">
+  <div class="icon">🔒</div>
+  <h2>Сайт заблокировал встраивание</h2>
+  <p>chat.cdnbakery.com запрещает открытие во фрейме. Нажмите кнопку ниже — сайт откроется в Safari с сохранением иконки на экране Домой.</p>
+  <a href="https://chat.cdnbakery.com/" id="open-link">Открыть сайт</a>
+</div>
+
+<script>
+  const TARGET = 'https://chat.cdnbakery.com/';
+  const frame  = document.getElementById('main-frame');
+  const splash = document.getElementById('splash');
+  const errorScreen = document.getElementById('error-screen');
+
+  // Регистрируем Service Worker для PWA
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+
+  // Скрываем сплэш когда iframe загрузился
+  frame.addEventListener('load', () => {
+    setTimeout(() => splash.classList.add('hidden'), 300);
+  });
+
+  // Детектируем блокировку X-Frame-Options:
+  // Если через 8 секунд iframe не загрузился — показываем экран ошибки
+  const blockTimer = setTimeout(() => {
+    // Пробуем получить доступ к contentDocument
+    try {
+      const doc = frame.contentDocument || frame.contentWindow.document;
+      // Если document пустой — заблокировано
+      if (!doc || !doc.body || doc.body.innerHTML === '') {
+        showError();
+      }
+    } catch (e) {
+      // SecurityError — cross-origin, значит iframe загрузился нормально
+      splash.classList.add('hidden');
+    }
+  }, 8000);
+
+  frame.addEventListener('load', () => clearTimeout(blockTimer));
+
+  function showError() {
+    splash.classList.add('hidden');
+    errorScreen.style.display = 'flex';
+  }
+
+  // iOS PWA: перехватываем ссылки которые пытаются открыться в новом окне
+  window.addEventListener('message', (e) => {
+    if (e.origin !== new URL(TARGET).origin) return;
+    // Можно добавить обработку сообщений от сайта если нужно
+  });
+</script>
+</body>
+</html>
