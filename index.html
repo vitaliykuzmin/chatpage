@@ -2,91 +2,353 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="CDN Bakery">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="theme-color" content="#1a1a2e">
-
+  <meta name="theme-color" content="#0f0f1a">
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
-
   <title>CDN Bakery Chat</title>
-
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #0f0f1a;
+      --card: #1a1a2e;
+      --accent: #6c63ff;
+      --accent2: #ff6584;
+      --text: #ffffff;
+      --muted: rgba(255,255,255,0.45);
+    }
+
     html, body {
       width: 100%; height: 100%;
-      background: #1a1a2e;
-      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
       min-height: 100svh;
+      background: var(--bg);
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
     }
-    .logo { font-size: 56px; margin-bottom: 20px; }
-    h1 { color: #fff; font-size: 22px; font-weight: 700; margin-bottom: 8px; }
-    p  { color: rgba(255,255,255,0.45); font-size: 14px; margin-bottom: 36px; }
 
-    .btn {
-      display: block;
-      background: #6c63ff;
-      color: #fff;
-      font-size: 17px;
-      font-weight: 600;
-      text-decoration: none;
-      padding: 16px 40px;
-      border-radius: 16px;
-      text-align: center;
-      margin-bottom: 16px;
+    /* ══════════════════════════════════════════
+       СПЛЭШ-ЭКРАН
+    ══════════════════════════════════════════ */
+    #splash {
+      position: fixed; inset: 0;
+      background: var(--bg);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      z-index: 999;
+      padding-bottom: env(safe-area-inset-bottom);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    #splash.out {
+      opacity: 0;
+      transform: scale(1.04);
+      pointer-events: none;
+    }
+
+    /* Анимированный фон */
+    #splash::before {
+      content: '';
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(ellipse 60% 50% at 20% 30%, rgba(108,99,255,0.18) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 40% at 80% 70%, rgba(255,101,132,0.12) 0%, transparent 70%);
+      animation: bgPulse 4s ease-in-out infinite alternate;
+    }
+    @keyframes bgPulse {
+      from { opacity: 0.6; }
+      to   { opacity: 1; }
+    }
+
+    /* Логотип */
+    .splash-icon-wrap {
+      position: relative;
+      width: 100px; height: 100px;
+      margin-bottom: 28px;
+    }
+    .splash-icon-bg {
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 28px;
+      box-shadow: 0 20px 60px rgba(108,99,255,0.4);
+      animation: iconFloat 3s ease-in-out infinite;
+    }
+    @keyframes iconFloat {
+      0%, 100% { transform: translateY(0); }
+      50%       { transform: translateY(-8px); }
+    }
+    .splash-icon-emoji {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 48px;
+    }
+
+    /* Кольцо вокруг иконки */
+    .splash-ring {
+      position: absolute;
+      inset: -12px;
+      border: 2px solid rgba(108,99,255,0.3);
+      border-radius: 38px;
+      animation: ringPulse 2s ease-out infinite;
+    }
+    .splash-ring:nth-child(2) { inset: -22px; border-radius: 46px; animation-delay: 0.4s; border-color: rgba(108,99,255,0.15); }
+    @keyframes ringPulse {
+      0%   { transform: scale(0.9); opacity: 0; }
+      50%  { opacity: 1; }
+      100% { transform: scale(1.1); opacity: 0; }
+    }
+
+    .splash-title {
+      color: var(--text);
+      font-size: 26px; font-weight: 700;
+      letter-spacing: -0.5px;
+      position: relative;
+      margin-bottom: 6px;
+    }
+    .splash-sub {
+      color: var(--muted);
+      font-size: 14px;
+      position: relative;
+      margin-bottom: 48px;
+    }
+
+    /* Прогресс-бар */
+    .progress-wrap {
+      position: relative;
+      width: 160px; height: 3px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border-radius: 99px;
+      width: 0%;
+      animation: progress 2s cubic-bezier(0.4,0,0.2,1) forwards;
+    }
+    @keyframes progress {
+      0%   { width: 0%; }
+      60%  { width: 75%; }
+      90%  { width: 92%; }
+      100% { width: 100%; }
+    }
+
+    /* ══════════════════════════════════════════
+       ПЛАВАЮЩАЯ ПАНЕЛЬ УПРАВЛЕНИЯ
+       Появляется поверх сайта после редиректа
+       (только когда запущено как PWA)
+    ══════════════════════════════════════════ */
+    #ctrl-panel {
+      display: none; /* показываем только в standalone-режиме через JS */
+      position: fixed;
+      bottom: calc(20px + env(safe-area-inset-bottom));
+      left: 50%; transform: translateX(-50%);
+      z-index: 9999;
+      background: rgba(15,15,26,0.85);
+      backdrop-filter: blur(20px) saturate(1.8);
+      -webkit-backdrop-filter: blur(20px) saturate(1.8);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 22px;
+      padding: 10px 16px;
+      display: none;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      /* Drag */
+      cursor: grab;
+      user-select: none;
+      touch-action: none;
+      transition: opacity 0.3s;
+    }
+    #ctrl-panel.visible { display: flex; }
+    #ctrl-panel.faded { opacity: 0.25; }
+
+    .ctrl-btn {
+      width: 40px; height: 40px;
+      border: none; outline: none;
+      background: rgba(255,255,255,0.07);
+      color: var(--text);
+      border-radius: 12px;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
       -webkit-tap-highlight-color: transparent;
+      transition: background 0.15s, transform 0.1s;
+      flex-shrink: 0;
     }
-    .btn:active { opacity: 0.8; }
+    .ctrl-btn:active { background: rgba(255,255,255,0.18); transform: scale(0.92); }
+    .ctrl-btn.accent { background: rgba(108,99,255,0.3); }
 
-    .spinner {
-      width: 32px; height: 32px;
-      border: 3px solid rgba(255,255,255,0.12);
-      border-top-color: #6c63ff;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin-top: 24px;
+    .ctrl-divider {
+      width: 1px; height: 24px;
+      background: rgba(255,255,255,0.1);
+      flex-shrink: 0;
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .hint { color: rgba(255,255,255,0.3); font-size: 12px; margin-top: 12px; text-align: center; line-height: 1.5; }
+
+    .zoom-label {
+      color: rgba(255,255,255,0.6);
+      font-size: 12px; font-weight: 600;
+      min-width: 38px; text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Кнопка скрыть/показать панель */
+    #toggle-btn {
+      position: fixed;
+      bottom: calc(78px + env(safe-area-inset-bottom));
+      right: 16px;
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      border: none; outline: none;
+      background: rgba(15,15,26,0.7);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      color: rgba(255,255,255,0.5);
+      font-size: 16px;
+      cursor: pointer;
+      display: none;
+      align-items: center; justify-content: center;
+      z-index: 9998;
+      -webkit-tap-highlight-color: transparent;
+      transition: opacity 0.2s;
+    }
+    #toggle-btn.visible { display: flex; }
   </style>
 </head>
 <body>
-  <div class="logo">🍞</div>
-  <h1>CDN Bakery Chat</h1>
-  <p>Открываем чат…</p>
-  <div class="spinner" id="spinner"></div>
-  <div class="hint" id="hint" style="display:none">
-    Не открылось автоматически?<br>
-    <a class="btn" style="margin-top:12px; display:inline-block; padding:12px 28px; font-size:15px;"
-       href="https://chat.cdnbakery.com/w/1/c/2429?search=&open=true">
-      Открыть вручную
-    </a>
+
+<!-- ── Сплэш-экран ── -->
+<div id="splash">
+  <div class="splash-icon-wrap">
+    <div class="splash-ring"></div>
+    <div class="splash-ring"></div>
+    <div class="splash-icon-bg"></div>
+    <div class="splash-icon-emoji">🍞</div>
   </div>
+  <div class="splash-title">CDN Bakery Chat</div>
+  <div class="splash-sub">chat.cdnbakery.com</div>
+  <div class="progress-wrap">
+    <div class="progress-bar"></div>
+  </div>
+</div>
 
-  <script>
-    const TARGET = 'https://chat.cdnbakery.com/w/1/c/2429?search=&open=true';
+<!-- ── Плавающая панель управления ── -->
+<!-- Видна только когда приложение уже на сайте (standalone PWA),
+     позволяет управлять масштабом страницы через CSS zoom -->
+<div id="ctrl-panel">
+  <!-- Масштаб -->
+  <button class="ctrl-btn" id="btn-zoom-out" title="Уменьшить">−</button>
+  <span class="zoom-label" id="zoom-label">100%</span>
+  <button class="ctrl-btn" id="btn-zoom-in" title="Увеличить">+</button>
+  <button class="ctrl-btn" id="btn-zoom-reset" title="Сбросить масштаб">⊙</button>
 
-    // Регистрируем Service Worker
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/chatpage/sw.js', { scope: '/chatpage/' }).catch(() => {});
-    }
+  <div class="ctrl-divider"></div>
 
-    // Немедленный редирект на целевой URL
-    // location.replace не добавляет запись в историю — кнопка "Назад" не вернёт на эту страницу
-    window.location.replace(TARGET);
+  <!-- Скрыть/показать fixed-элементы сайта -->
+  <button class="ctrl-btn" id="btn-toggle-fixed" title="Скрыть/показать шапку">☰</button>
 
-    // Если через 3 секунды всё ещё здесь — показываем кнопку (на случай блокировки редиректа)
+  <div class="ctrl-divider"></div>
+
+  <!-- Обновить страницу -->
+  <button class="ctrl-btn" id="btn-reload" title="Обновить">↺</button>
+</div>
+
+<!-- Маленькая кнопка скрыть панель -->
+<button id="toggle-btn" title="Панель">⚙</button>
+
+<script>
+  const TARGET = 'https://chat.cdnbakery.com/w/1/c/2429?search=&open=true';
+
+  // Service Worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/chatpage/sw.js', { scope: '/chatpage/' }).catch(() => {});
+  }
+
+  // ── Редирект после анимации прогресс-бара ──
+  const splash = document.getElementById('splash');
+  const isPWA  = window.navigator.standalone === true
+              || window.matchMedia('(display-mode: standalone)').matches;
+
+  setTimeout(() => {
+    splash.classList.add('out');
     setTimeout(() => {
-      document.getElementById('spinner').style.display = 'none';
-      document.getElementById('hint').style.display = 'block';
-    }, 3000);
-  </script>
+      window.location.replace(TARGET);
+    }, 400);
+  }, 2200);
+
+  // ── Панель управления ──
+  // Панель работает только когда мы уже на сайте (т.е. этот скрипт запущен
+  // НЕ через редирект, а напрямую — например при повторном открытии PWA
+  // которая закешировала старую страницу).
+  // На практике панель нужна как userscript-инструмент — см. userscript.js.
+
+  const panel     = document.getElementById('ctrl-panel');
+  const toggleBtn = document.getElementById('toggle-btn');
+
+  if (isPWA) {
+    // Показываем панель только если мы НЕ делаем редирект (уже на целевом сайте)
+    // В текущей версии это не актуально — оставляем для будущего iframe-режима
+    // panel.classList.add('visible');
+    // toggleBtn.classList.add('visible');
+  }
+
+  // Масштаб (для iframe-режима / будущего использования)
+  let zoom = 100;
+  const zoomLabel = document.getElementById('zoom-label');
+
+  function setZoom(val) {
+    zoom = Math.min(200, Math.max(50, val));
+    zoomLabel.textContent = zoom + '%';
+    document.body.style.zoom = (zoom / 100);
+    // Сохраняем в localStorage
+    try { localStorage.setItem('pwa_zoom', zoom); } catch(e) {}
+  }
+
+  // Восстанавливаем сохранённый масштаб
+  try {
+    const saved = parseInt(localStorage.getItem('pwa_zoom'));
+    if (saved && saved !== 100) setZoom(saved);
+  } catch(e) {}
+
+  document.getElementById('btn-zoom-out').addEventListener('click', () => setZoom(zoom - 10));
+  document.getElementById('btn-zoom-in').addEventListener('click',  () => setZoom(zoom + 10));
+  document.getElementById('btn-zoom-reset').addEventListener('click', () => setZoom(100));
+  document.getElementById('btn-reload').addEventListener('click', () => location.reload());
+
+  // Скрыть/показать панель
+  let panelVisible = true;
+  toggleBtn.addEventListener('click', () => {
+    panelVisible = !panelVisible;
+    panel.classList.toggle('faded', !panelVisible);
+    toggleBtn.textContent = panelVisible ? '⚙' : '👁';
+  });
+
+  // Перетаскивание панели (drag)
+  let dragActive = false, startX, startY, panelX = 0, panelY = 0;
+
+  panel.addEventListener('touchstart', e => {
+    if (e.target.closest('.ctrl-btn')) return;
+    dragActive = true;
+    const t = e.touches[0];
+    startX = t.clientX - panelX;
+    startY = t.clientY - panelY;
+    panel.style.transition = 'none';
+  }, { passive: true });
+
+  panel.addEventListener('touchmove', e => {
+    if (!dragActive) return;
+    const t = e.touches[0];
+    panelX = t.clientX - startX;
+    panelY = t.clientY - startY;
+    panel.style.transform = `translateX(calc(-50% + ${panelX}px)) translateY(${panelY}px)`;
+  }, { passive: true });
+
+  panel.addEventListener('touchend', () => { dragActive = false; });
+</script>
 </body>
 </html>
