@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <script>
+    // GitHub Pages SPA fix: редиректим любой 404 обратно на index.html
+    // сохраняя путь в sessionStorage чтобы index.html мог его прочитать
+    sessionStorage.setItem('redirect', location.href);
+    location.replace(location.origin + '/chatpage/');
+  </script>
+</head>
+</html>

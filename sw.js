@@ -1,6 +1,7 @@
 // Service Worker для PWA — CDN Bakery Chat
 const CACHE = 'cdnbakery-v1';
-const SHELL = ['/', '/index.html', '/manifest.json', '/icon-192.png', '/icon-512.png'];
+const BASE = '/chatpage/';
+const SHELL = [BASE, BASE + 'index.html', BASE + 'manifest.json', BASE + 'icon-192.png', BASE + 'icon-512.png'];
 
 // Установка: кэшируем оболочку приложения
 self.addEventListener('install', e => {

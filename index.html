@@ -163,9 +163,9 @@
   const splash = document.getElementById('splash');
   const errorScreen = document.getElementById('error-screen');
 
-  // Регистрируем Service Worker для PWA
+  // Регистрируем Service Worker с точным scope для репо chatpage
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
+    navigator.serviceWorker.register('/chatpage/sw.js', { scope: '/chatpage/' }).catch(() => {});
   }
 
   // Скрываем сплэш когда iframe загрузился
